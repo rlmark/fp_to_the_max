@@ -9,7 +9,7 @@ case class IO[A](unsafeRun: () => A) { self =>
   }
 
   def flatMap[B](f: A => IO[B]): IO[B] = {
-    /* note: while this flatMap implementation compiles f(this.unsafeRun), this is evaluated immediately.
+    /* note: while this flatMap implementation compiles: f(this.unsafeRun), this is evaluated immediately.
     This doesn't give us the ability to separate program definition from its execution. */
     IO[B](() => f(self.unsafeRun()).unsafeRun())
   }
