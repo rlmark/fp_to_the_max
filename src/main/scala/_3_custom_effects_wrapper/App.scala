@@ -24,7 +24,7 @@ object App {
       _ <- printlnIO("Hey there, let's play a guessing game. What is your name?")
       name <- readlnIO()
       _ <- printlnIO(s"Great, $name, let's begin")
-      _ <- gameloop(name)
+      _ <- gameLoop(name)
     } yield ()
 
     program.unsafeRun()
@@ -46,22 +46,25 @@ object App {
     IO(() => Random.nextInt(upper) + 1)
   }
 
-  def gameloop(name: String): IO[Unit] = {
+  def gameLoop(name: String): IO[Unit] = {
     for {
       _ <- printlnIO("I'm thinking of a number between 1 and 5. What's your guess")
       targetNum <- generateNumber(5)
       playerGuess <- readlnIO()
-      validGuess = parseInt(playerGuess)
-      _ <- validGuess match {
-        case None => printlnIO("Please enter a number.")
-        case Some(int) =>
-          if (targetNum == int) {
-            printlnIO(s"Good job, $name, you win!")
-          } else printlnIO(s"Sorry! My number was $targetNum")
-      }
+      _ <- scoreGame(parseInt(playerGuess), targetNum, name)
       continue <- checkPlayerContinue()
-      _ <- if(continue) gameloop(name) else IO.pure(())
+      _ <- if(continue) gameLoop(name) else IO.pure(())
     } yield ()
+  }
+
+  def scoreGame(maybeGuess: Option[Int], targetNum: Int, name: String): IO[Unit] = {
+    maybeGuess match {
+      case None => printlnIO("Please enter a number.")
+      case Some(int) =>
+        if (targetNum == int) {
+          printlnIO(s"Good job, $name, you win!")
+        } else printlnIO(s"Sorry! My number was $targetNum")
+    }
   }
 
   def checkPlayerContinue(): IO[Boolean] = {
