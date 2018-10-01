@@ -10,7 +10,7 @@ trait Program[F[_]] {
   def map[A,B](fa: F[A], f: A => B): F[B]
 }
 
-object Program{
+object Program {
   def apply[F[_]](implicit F: Program[F]) = F
 
   // You make nice syntax via implicit classes in Scala
@@ -40,11 +40,9 @@ case class IO[A](unsafeRun: () => A) { self =>
     IO[B](() => f(self.unsafeRun()).unsafeRun())
   }
 }
-
 object IO {
   def pure[A](a: A): IO[A] = IO(() => a)
 }
-
 object IOHelpers {
   implicit val ioProgram: Program[IO] = new Program[IO] {
     override def finish[A](a: => A): IO[A] = pure(a)
@@ -57,14 +55,26 @@ object IOHelpers {
 
 trait Console[F[_]] {
   def putStrLine(s: String):F[Unit]
-  def getStrLine(): F[String]
 
+  def getStrLine(): F[String]
 }
-object Console{
+object Console {
   def apply[F[_]](implicit F: Console[F]) = F
 }
+object ConsoleHelpers {
+  def putLine[F[_]: Console](s: String): F[Unit] = Console[F].putStrLine(s)
+  def getLine[F[_]: Console](): F[String] = Console[F].getStrLine()
+}
 
-
+trait Random[F[_]] {
+  def nextInt(upper: Int): F[Int]
+}
+object Random {
+  def apply[F[_]](implicit random: Random[F]): Random[F] = random
+}
+object RandomHelpers {
+  def nextInt[F[_]](upper: Int)(implicit F: Random[F]): F[Int] = Random[F].nextInt(upper)
+}
 
 object App {
   def main[F[_]: Program](args: Array[String]): Unit = {
