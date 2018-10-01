@@ -1,5 +1,7 @@
 package _4_tagless_final
 
+import _4_tagless_final.IO.pure
+
 trait Program[F[_]] {
   def finish[A](a: => A): F[A]
 
@@ -7,6 +9,7 @@ trait Program[F[_]] {
 
   def map[A,B](fa: F[A], f: A => B): F[B]
 }
+
 object Program{
   def apply[F[_]](implicit F: Program[F]) = F
 
@@ -14,14 +17,16 @@ object Program{
   // Implicit classes must have a primary constructor with exactly 1 argument
   // HERE's WHY: So if we have an instance of Program in scope, any F[_] will have map and flatmap for free!
   implicit class ProgramSyntax[F[_], A](fa: F[A]) {
-    def map[B](f: A => B)(implicit F: Program[F]) = {
-      F.map(fa, f)
+    def map[B](f: A => B)(implicit programF: Program[F]) = {
+      programF.map(fa, f)
     }
-    def flatMap[B](f: A => F[B])(implicit F: Program[F]) = {
-      F.chain(fa, f)
+    def flatMap[B](f: A => F[B])(implicit programF: Program[F]) = {
+      programF.chain(fa, f)
     }
   }
-
+  def pure[A, F[_]](a: A)(implicit programF: Program[F]) = {
+    programF.finish(a)
+  }
 }
 
 case class IO[A](unsafeRun: () => A) { self =>
@@ -35,10 +40,13 @@ case class IO[A](unsafeRun: () => A) { self =>
     IO[B](() => f(self.unsafeRun()).unsafeRun())
   }
 }
+
 object IO {
   def pure[A](a: A): IO[A] = IO(() => a)
+}
 
-  implicit val ioProgram = new Program[IO] {
+object IOHelpers {
+  implicit val ioProgram: Program[IO] = new Program[IO] {
     override def finish[A](a: => A): IO[A] = pure(a)
 
     override def chain[A, B](fa: IO[A], atb: A => IO[B]): IO[B] = fa.flatMap(atb)
@@ -47,10 +55,19 @@ object IO {
   }
 }
 
+trait Console[F[_]] {
+  def putStrLine(s: String):F[Unit]
+  def getStrLine(): F[String]
+
+}
+object Console{
+  def apply[F[_]](implicit F: Console[F]) = F
+}
+
 
 
 object App {
-  def main(args: Array[String]): Unit = {
+  def main[F[_]: Program](args: Array[String]): Unit = {
     val program = for {
       _ <- printlnIO("Hey there, let's play a guessing game. What is your name?")
       name <- readlnIO()
